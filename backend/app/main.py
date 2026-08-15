@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .api import bookings, continuity, demo, flights, risks, trips
 from .database import Base, engine
@@ -38,3 +39,11 @@ app.include_router(demo.router)
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+from pathlib import Path
+
+static_dir = Path(__file__).parent.parent / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")

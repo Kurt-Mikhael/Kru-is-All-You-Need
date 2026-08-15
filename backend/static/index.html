@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kru is All You Need — Agentic Trip Continuity</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true">
+      <circle cx="24" cy="24" r="22" fill="#10284d"/>
+      <path d="M8 26 L40 18 M8 26 L40 34 M14 26 L24 18 M18 26 L28 34" stroke="#66b1ff" stroke-width="2" fill="none"/>
+      <circle cx="24" cy="24" r="3" fill="#fff"/>
+    </svg>
+    <div>
+      <h1>Kru is All You Need</h1>
+      <span class="tagline">Agentic Trip Continuity Platform</span>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-ghost" id="btnDemoSeed">Demo Seed</button>
+    <button class="btn btn-ghost" id="btnReset">Reset</button>
+    <button class="btn btn-primary" id="btnNewTrip">+ Trip Baru</button>
+  </div>
+</header>
+
+<main>
+  <div class="layout">
+    <aside class="sidebar">
+      <section class="card">
+        <h2 class="card-title">Trips</h2>
+        <div id="tripList" class="trip-list"><p class="muted">Belum ada trip. Klik "Demo Seed".</p></div>
+      </section>
+      <section class="card">
+        <h2 class="card-title">Risk Events <button class="btn btn-sm btn-outline" id="btnRefreshEvents" title="Refresh">↻</button></h2>
+        <div id="eventList" class="event-list"></div>
+        <div class="event-inject">
+          <button class="btn btn-sm btn-outline" data-inject="TOKYO_SEVERE_WEATHER">Badai Tokyo</button>
+          <button class="btn btn-sm btn-outline" data-inject="AIRPORT_STRIKE">Strike</button>
+          <button class="btn btn-sm btn-outline" data-inject="AIRLINE_CANCELLATION">Batal Maskapai</button>
+          <button class="btn btn-sm btn-outline" id="btnWeatherCheck">Cek Cuaca</button>
+        </div>
+      </section>
+    </aside>
+
+    <section class="content" id="tripDetail">
+      <div class="empty-state card">
+        <h2>Pilih trip untuk melihat detail</h2>
+        <p class="muted">Klik salah satu trip di panel kiri. Sistem akan menampilkan booking, risiko, dan rencana pemulihan.</p>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="modal-overlay hidden" id="modalTrip">
+  <div class="modal">
+    <h2>Trip Baru</h2>
+    <label>Nama <input id="tName" placeholder="Liburan Jepang"></label>
+    <div class="row2">
+      <label>Asal (kode) <input id="tOrigin" placeholder="CGK" maxlength="3"></label>
+      <label>Tujuan (kode) <input id="tDest" placeholder="NRT" maxlength="3"></label>
+    </div>
+    <div class="row2">
+      <label>Tanggal berangkat <input id="tStart" type="date"></label>
+      <label>Tanggal pulang <input id="tEnd" type="date"></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCancelTrip">Batal</button>
+      <button class="btn btn-primary" id="btnSaveTrip">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
