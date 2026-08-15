@@ -1,6 +1,6 @@
-# Agentic Trip Continuity Platform
+# Kru is All You Need
 
-AI agent yang memantau trip perjalanan secara otomatis dan menyusun rencana pemulihan (recovery plan) ketika risiko muncul — cuaca buruk, konflik geopolitik, atau pembatalan maskapai.
+Agentic Trip Continuity Platform — AI agent yang memantau trip perjalanan secara otomatis dan menyusun rencana pemulihan (recovery plan) ketika risiko muncul — cuaca buruk, konflik geopolitik, atau pembatalan maskapai.
 
 **Konsep:** user cukup 2x interaksi — input data booking di awal, klik approve di tengah. Sistem yang jalankan sisanya: pantau → deteksi bahaya → nilai risiko → susun rencana → eksekusi (flight rebooking via Atlas sandbox).
 
