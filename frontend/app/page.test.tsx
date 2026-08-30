@@ -18,6 +18,5 @@ describe("landing page", () => {
     expect(html).not.toContain("Trip Graph")
     expect(html).toContain("Open continuity workspace")
     expect(html).toContain('href="/app"')
-    expect(html).toContain("Kru protects paid trips when disruption appears")
   })
 })

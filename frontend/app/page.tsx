@@ -7,27 +7,13 @@ export default function Landing() {
     <main className="relative min-h-screen overflow-hidden bg-background">
       <GlobeDemo />
       <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4">
-        <section
-          aria-label="Enter continuity workspace"
-          className="pointer-events-auto w-full max-w-[520px] rounded-2xl border border-slate-200 bg-white/95 p-5 text-center shadow-[0_16px_48px_rgba(15,23,42,0.18)] backdrop-blur supports-[backdrop-filter]:bg-white/85 sm:p-6"
+        <a
+          href="/app"
+          aria-label="Open continuity workspace"
+          className="pointer-events-auto btn btn-primary shadow-[0_12px_32px_rgba(15,23,42,0.22)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2"
         >
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            Trip continuity
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            Kru protects paid trips when disruption appears. Review exposure and replan
-            affected bookings in one workspace.
-          </p>
-          <a
-            href="/app"
-            className="btn btn-primary mt-4 inline-flex w-full justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 sm:w-auto"
-          >
-            Open continuity workspace
-          </a>
-          <p className="mt-3 text-xs leading-relaxed text-slate-500">
-            No setup required — opens with sample data.
-          </p>
-        </section>
+          Open continuity workspace
+        </a>
       </div>
     </main>
   );
