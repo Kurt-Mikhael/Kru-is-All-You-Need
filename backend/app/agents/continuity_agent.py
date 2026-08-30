@@ -122,17 +122,33 @@ def execute_scenario(db: Session, scenario: Scenario) -> list[dict]:
         booking = db.get(Booking, action.get("booking_id"))
         if not booking:
             continue
-        if action.get("action") == "KEEP":
-            results.append({"booking_id": booking.id, "title": booking.title, "action": "KEEP", "simulated": False})
+
+        action_name = str(action.get("action", "KEEP")).upper()
+        new_time = action.get("new_time", booking.start_time)
+        if action_name == "KEEP":
+            results.append(
+                {
+                    "booking_id": booking.id,
+                    "title": booking.title,
+                    "booking_type": booking.booking_type,
+                    "action": action_name,
+                    "new_time": booking.start_time,
+                    "status": booking.status,
+                    "provider": booking.provider,
+                    "simulated": False,
+                    "provenance": "UNCHANGED",
+                }
+            )
             continue
-        if action.get("action") == "REBOOK" and booking.booking_type == "flight":
+
+        if action_name == "REBOOK" and booking.booking_type.lower() == "flight":
             from ..integrations.atlas import adapter as atlas_adapter
 
             alt = AlternativeFlight(
                 flight_number=action.get("flight_number", ""),
                 origin=booking.trip.origin if booking.trip else "",
                 destination=booking.location,
-                dep_time=action.get("new_time", booking.start_time),
+                dep_time=new_time,
                 arr_time="",
                 price=action.get("flight_price", booking.cost),
                 currency="USD",
@@ -141,13 +157,36 @@ def execute_scenario(db: Session, scenario: Scenario) -> list[dict]:
                 stops=0,
                 provider_ref=action.get("provider_ref", ""),
             )
-            result = atlas_adapter.book_alternative_flight(alt, passengers=1)
-            booking.external_ref = result.get("order_no") or result.get("pnr") or booking.external_ref
-            if result.get("ticketed"):
-                booking.status = "CONFIRMED"
-            results.append({"booking_id": booking.id, "title": booking.title, **result})
+            provider_result = atlas_adapter.book_alternative_flight(alt, passengers=1)
+            booking.start_time = new_time
+            booking.external_ref = (
+                provider_result.get("order_no")
+                or provider_result.get("pnr")
+                or booking.external_ref
+            )
+            provider = provider_result.get("provider") or booking.provider
+            simulated = bool(provider_result.get("simulated", provider.upper() == "MOCK"))
+            booking.provider = provider
+            booking.status = "CONFIRMED" if provider_result.get("ticketed") else "CHANGED"
+            db.add(booking)
+            results.append(
+                {
+                    "booking_id": booking.id,
+                    "title": booking.title,
+                    "booking_type": booking.booking_type,
+                    "action": action_name,
+                    "new_time": booking.start_time,
+                    "status": booking.status,
+                    "provider": provider,
+                    "simulated": simulated,
+                    "provenance": "SIMULATED" if simulated else "LIVE_ATLAS",
+                    "external_ref": booking.external_ref,
+                    **provider_result,
+                }
+            )
             continue
-        booking.start_time = action.get("new_time", booking.start_time)
+
+        booking.start_time = new_time
         booking.status = "CHANGED"
         db.add(booking)
         results.append(
@@ -155,9 +194,12 @@ def execute_scenario(db: Session, scenario: Scenario) -> list[dict]:
                 "booking_id": booking.id,
                 "title": booking.title,
                 "booking_type": booking.booking_type,
-                "action": action.get("action"),
-                "new_time": action.get("new_time", ""),
+                "action": action_name,
+                "new_time": booking.start_time,
+                "status": booking.status,
+                "provider": booking.provider,
                 "simulated": True,
+                "provenance": "SIMULATED",
             }
         )
     scenario.status = "EXECUTED"

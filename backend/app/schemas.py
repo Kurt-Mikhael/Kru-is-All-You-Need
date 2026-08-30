@@ -146,6 +146,7 @@ class AgentLogOut(BaseModel):
     created_at: datetime
 
 
+
 class FinancialExposureOut(BaseModel):
     total_value: float
     refundable_value: float
@@ -173,6 +174,26 @@ class TripGraphOut(BaseModel):
     nodes: list[GraphNode]
     edges: list[GraphEdge]
 
+
+class ExecutionResultOut(BaseModel):
+    booking_id: int
+    title: str
+    booking_type: str
+    action: str
+    new_time: str = ""
+    status: str
+    provider: str = ""
+    simulated: bool = False
+    provenance: str = ""
+
+
+class ScenarioExecutionOut(BaseModel):
+    scenario_id: int
+    results: list[ExecutionResultOut]
+    trip: TripDetail
+    graph: TripGraphOut
+    financial_exposure: FinancialExposureOut
+    risk: RiskEvaluationOut
 
 class PolicyOut(BaseModel):
     booking_id: int

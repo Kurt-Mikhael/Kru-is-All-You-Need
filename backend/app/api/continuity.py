@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from ..agents.continuity_agent import execute_scenario, run_analysis
 from ..database import get_db
 from ..models import AgentLogEntry, Booking, RiskAssessment, RiskEvent, Scenario, Trip
-from ..schemas import AgentLogOut, ScenarioOut
+from ..schemas import AgentLogOut, ScenarioExecutionOut, ScenarioOut
+from ..services import financial_exposure, risk_engine, trip_graph
 
 router = APIRouter(prefix="/api/continuity", tags=["continuity"])
 
@@ -59,16 +60,34 @@ def approve(scenario_id: int, db: Session = Depends(get_db)):
     db.refresh(scenario)
     return scenario
 
-
-@router.post("/scenarios/{scenario_id}/execute")
+@router.post("/scenarios/{scenario_id}/execute", response_model=ScenarioExecutionOut)
 def execute(scenario_id: int, db: Session = Depends(get_db)):
     scenario = db.get(Scenario, scenario_id)
     if not scenario:
         raise HTTPException(404, "scenario not found")
+    if scenario.status == "EXECUTED":
+        raise HTTPException(409, "scenario already executed")
     if scenario.status != "APPROVED":
         raise HTTPException(400, "scenario must be approved first")
+
     results = execute_scenario(db, scenario)
-    return {"scenario_id": scenario_id, "results": results}
+    trip = db.get(Trip, scenario.trip_id)
+    assessment = risk_engine.evaluate_trip(db, trip.id, scenario.risk_event_id)
+    return ScenarioExecutionOut(
+        scenario_id=scenario_id,
+        results=results,
+        trip=trip,
+        graph=trip_graph.get_trip_graph(db, trip.id),
+        financial_exposure=financial_exposure.get_financial_exposure(db, trip.id),
+        risk={
+            "trip_id": trip.id,
+            "risk_event_id": assessment.risk_event_id,
+            "exposure_score": assessment.exposure_score,
+            "risk_state": trip.risk_state,
+            "affected_booking_ids": assessment.affected_booking_ids,
+            "drivers": assessment.drivers,
+        },
+    )
 
 
 @router.get("/trips/{trip_id}/activities", response_model=list[AgentLogOut])
