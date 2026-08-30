@@ -32,3 +32,5 @@ export function Kpi({ label, value, sub }: { label: string; value: string; sub?:
     </div>
   );
 }
+export { ExposureCards, type FinancialExposure } from "./ui/exposure-cards";
+export { TripGraph, type GraphEdge, type GraphNode, type TripGraphData } from "./ui/trip-graph";
