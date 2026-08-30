@@ -86,9 +86,7 @@ def operational_disruption(flight_booking_id: int, db: Session = Depends(get_db)
         )
         run_analysis(db, trip, event, assessment)
         results = [{"trip_id": trip.id, "analyzed": True}]
-    return {"event": event, "recovery": results}
-
-
+    return {"event": RiskEventOut.model_validate(event).model_dump(), "recovery": results}
 @router.post("/evaluate/{trip_id}", response_model=RiskEvaluationOut)
 def evaluate(trip_id: int, risk_event_id: int, db: Session = Depends(get_db)):
     if not db.get(Trip, trip_id):
