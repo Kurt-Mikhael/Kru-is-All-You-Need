@@ -6,3 +6,7 @@ backend/trip_continuity.db
 backend/.venv/
 .venv/
 artifacts-run/
+frontend/node_modules/
+frontend/.next/
+frontend/package-lock.json
+frontend/.turbo/
