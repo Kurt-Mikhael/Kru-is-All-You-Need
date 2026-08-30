@@ -115,6 +115,8 @@ export function Globe({
       <canvas
         className="size-full opacity-0 transition-opacity duration-500 [contain:layout_paint_size]"
         ref={canvasRef}
+        role="img"
+        aria-label="Interactive globe showing Kru's connected travel network"
         onPointerDown={(event) =>
           updatePointerInteraction(
             event.clientX - pointerInteractionMovement.current,
@@ -128,7 +130,9 @@ export function Globe({
           const touch = event.touches[0]
           if (touch) updateMovement(touch.clientX)
         }}
-      />
+      >
+        Kru's interactive globe. Open the continuity workspace to review your trip.
+      </canvas>
     </div>
   )
 }

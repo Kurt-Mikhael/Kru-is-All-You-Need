@@ -6,6 +6,7 @@ export function GlobeDemo() {
   return (
     <section
       aria-labelledby="kru-globe-title"
+      aria-describedby="kru-globe-description"
       className="relative flex min-h-svh w-full items-center justify-center overflow-hidden bg-background px-4 pb-40 pt-8"
     >
       <h1
@@ -14,6 +15,9 @@ export function GlobeDemo() {
       >
         Kru Is All You Need
       </h1>
+      <p id="kru-globe-description" className="sr-only">
+        Interactive globe showing Kru's connected travel network. Use the continuity workspace below to review and protect a trip when disruption appears.
+      </p>
       <Globe className="top-28 h-[min(100svh,100vw)] w-[min(100svh,100vw)] max-w-none" />
       <div className="pointer-events-none absolute inset-0 h-full bg-[radial-gradient(circle_at_50%_200%,rgba(0,0,0,0.2),rgba(255,255,255,0))]" />
     </section>
