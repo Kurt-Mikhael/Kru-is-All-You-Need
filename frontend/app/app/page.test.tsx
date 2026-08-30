@@ -4,6 +4,7 @@ import {
   executionFailed,
   getSelectedRiskEvent,
   rankScenarios,
+  validateBookingRows,
 } from "./page"
 
 describe("continuity workspace page contracts", () => {
@@ -17,11 +18,36 @@ describe("continuity workspace page contracts", () => {
     expect(getSelectedRiskEvent(events, null)).toBeUndefined()
   })
 
+  test("ranks only actionable draft scenarios and excludes historical plans", () => {
+    const ranked = rankScenarios([
+      { id: 1, plan_code: "A", status: "EXECUTED", overall_score: 99 },
+      { id: 2, plan_code: "B", status: "DRAFT", overall_score: 71 },
+      { id: 3, plan_code: "C", status: "APPROVED", overall_score: 100 },
+      { id: 4, plan_code: "D", status: "DRAFT", overall_score: 88 },
+    ])
+
+    expect(ranked.map((scenario) => scenario.plan_code)).toEqual(["D", "B"])
+  })
+
+  test("rejects invalid custom booking financial fields before submission", () => {
+    const valid = { booking_type: "flight", provider: "Atlas", title: "Flight", location: "NRT", start_time: "20261001T0900", end_time: "20261001T1500", cost: "720", currency: "USD", cancel_deadline: "20260930T0900", change_deadline: "20260930T0900", refundable_pct: "50" }
+
+    expect(validateBookingRows([{ ...valid, currency: "" }])).toMatch(/currency/i)
+    expect(validateBookingRows([{ ...valid, currency: "ZZZ" }])).toMatch(/currency/i)
+    expect(validateBookingRows([{ ...valid, cost: "-1" }])).toMatch(/cost/i)
+    expect(validateBookingRows([{ ...valid, refundable_pct: "101" }])).toMatch(/refundable/i)
+    expect(validateBookingRows([valid])).toBeNull()
+  })
+
+  test("treats empty execution results as a failed outcome", () => {
+    expect(executionFailed([])).toBe(true)
+  })
+
   test("ranks every scenario by highest overall score", () => {
     const ranked = rankScenarios([
-      { id: 1, plan_code: "A", overall_score: 71 },
-      { id: 2, plan_code: "B", overall_score: 88 },
-      { id: 3, plan_code: "C", overall_score: 80 },
+      { id: 1, plan_code: "A", status: "DRAFT", overall_score: 71 },
+      { id: 2, plan_code: "B", status: "DRAFT", overall_score: 88 },
+      { id: 3, plan_code: "C", status: "DRAFT", overall_score: 80 },
     ])
 
     expect(ranked.map((scenario) => scenario.plan_code)).toEqual(["B", "C", "A"])
@@ -44,6 +70,6 @@ describe("continuity workspace page contracts", () => {
   test("treats failed execution results as a failed outcome", () => {
     expect(executionFailed([{ booking_id: 1, status: "FAILED" }])).toBe(true)
     expect(executionFailed([{ booking_id: 1, status: "ERROR" }])).toBe(true)
-    expect(executionFailed([])).toBe(false)
+    expect(executionFailed([])).toBe(true)
   })
 })
