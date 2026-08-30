@@ -68,37 +68,37 @@ function AppContent() {
 
   async function demoSeed() {
     setLoading(true);
-    try { await api("/demo/seed", { method: "POST" }); show("Demo seed OK"); await loadTrips(); await loadEvents(); } catch (e) { show(e instanceof Error ? e.message : "seed gagal", true); } finally { setLoading(false); }
+    try { await api("/demo/seed", { method: "POST" }); show("Demo seed created"); await loadTrips(); await loadEvents(); } catch (e) { show(e instanceof Error ? e.message : "seed failed", true); } finally { setLoading(false); }
   }
   async function demoReset() {
     setLoading(true);
-    try { await api("/demo/reset", { method: "POST" }); setDetail(null); setScenarios([]); setLogs([]); setSelected(null); show("Reset OK"); await loadTrips(); await loadEvents(); } catch (e) { show(e instanceof Error ? e.message : "reset gagal", true); } finally { setLoading(false); }
+    try { await api("/demo/reset", { method: "POST" }); setDetail(null); setScenarios([]); setLogs([]); setSelected(null); show("Reset OK"); await loadTrips(); await loadEvents(); } catch (e) { show(e instanceof Error ? e.message : "reset failed", true); } finally { setLoading(false); }
   }
   async function inject(s: string) {
-    try { await api(`/risk/events/demo?scenario=${s}`, { method: "POST" }); show(`Inject ${s}`); await loadEvents(); } catch (e) { show(e instanceof Error ? e.message : "inject gagal", true); }
+    try { await api(`/risk/events/demo?scenario=${s}`, { method: "POST" }); show(`Inject ${s}`); await loadEvents(); } catch (e) { show(e instanceof Error ? e.message : "inject failed", true); }
   }
   async function weatherCheck() {
-    try { const r = (await api("/risk/check-weather", { method: "POST" })) as { created: number }; show(`Cuaca: ${r.created} event baru`); await loadEvents(); } catch (e) { show(e instanceof Error ? e.message : "weather gagal", true); }
+    try { const r = (await api("/risk/check-weather", { method: "POST" })) as { created: number }; show(`Cuaca: ${r.created} event baru`); await loadEvents(); } catch (e) { show(e instanceof Error ? e.message : "weather check failed", true); }
   }
   async function createTrip() {
-    if (!form.name || !form.origin || !form.destination || !form.start_date || !form.end_date) return show("Lengkapi form", true);
-    try { const t = (await api("/trips", { method: "POST", body: JSON.stringify(form) })) as Trip; show(`Trip ${t.id} dibuat`); setShowNew(false); await loadTrips(); setSelected(t.id); } catch (e) { show(e instanceof Error ? e.message : "create gagal", true); }
+    if (!form.name || !form.origin || !form.destination || !form.start_date || !form.end_date) return show("Complete the form", true);
+    try { const t = (await api("/trips", { method: "POST", body: JSON.stringify(form) })) as Trip; show(`Trip ${t.id} dibuat`); setShowNew(false); await loadTrips(); setSelected(t.id); } catch (e) { show(e instanceof Error ? e.message : "creation failed", true); }
   }
   async function evaluate() {
-    if (!selected || !events[0]) return show("Butuh event dulu — inject Badai Tokyo", true);
-    try { await api(`/risk/evaluate/${selected}?risk_event_id=${events[0].id}`, { method: "POST" }); show("Evaluate OK"); await loadTrips(); await loadDetail(selected); } catch (e) { show(e instanceof Error ? e.message : "evaluate gagal", true); }
+    if (!selected || !events[0]) return show("Need an event first — inject Tokyo Storm", true);
+    try { await api(`/risk/evaluate/${selected}?risk_event_id=${events[0].id}`, { method: "POST" }); show("Evaluate OK"); await loadTrips(); await loadDetail(selected); } catch (e) { show(e instanceof Error ? e.message : "evaluate failed", true); }
   }
   async function analyze() {
     if (!selected) return;
     setLoading(true);
-    try { const sc = (await api(`/continuity/analyze/${selected}`, { method: "POST" })) as Scenario[]; setScenarios(sc); show(`${sc.length} scenario siap`); await loadDetail(selected); } catch (e) { show(e instanceof Error ? e.message : "analyze gagal", true); } finally { setLoading(false); }
+    try { const sc = (await api(`/continuity/analyze/${selected}`, { method: "POST" })) as Scenario[]; setScenarios(sc); show(`${sc.length} scenario siap`); await loadDetail(selected); } catch (e) { show(e instanceof Error ? e.message : "analyze failed", true); } finally { setLoading(false); }
   }
   async function approve(id: number) {
-    try { await api(`/continuity/scenarios/${id}/approve`, { method: "POST" }); show("Approved"); if (selected) await loadDetail(selected); } catch (e) { show(e instanceof Error ? e.message : "approve gagal", true); }
+    try { await api(`/continuity/scenarios/${id}/approve`, { method: "POST" }); show("Approved"); if (selected) await loadDetail(selected); } catch (e) { show(e instanceof Error ? e.message : "approve failed", true); }
   }
   async function executeScenario(id: number) {
     setLoading(true);
-    try { const r = (await api(`/continuity/scenarios/${id}/execute`, { method: "POST" })) as { results: unknown[] }; show(`Execute: ${r.results.length} actions`); if (selected) await loadDetail(selected); } catch (e) { show(e instanceof Error ? e.message : "execute gagal", true); } finally { setLoading(false); }
+    try { const r = (await api(`/continuity/scenarios/${id}/execute`, { method: "POST" })) as { results: unknown[] }; show(`Execute: ${r.results.length} actions`); if (selected) await loadDetail(selected); } catch (e) { show(e instanceof Error ? e.message : "execute failed", true); } finally { setLoading(false); }
   }
 
   return (
@@ -112,7 +112,7 @@ function AppContent() {
           <div className="flex flex-wrap gap-2">
             <button onClick={demoSeed} disabled={loading} className="btn btn-ghost btn-sm"><Sparkles size={14} /> Demo Seed</button>
             <button onClick={demoReset} disabled={loading} className="btn btn-ghost btn-sm"><Trash2 size={14} /> Reset</button>
-            <button onClick={() => setShowNew(true)} className="btn btn-primary btn-sm"><Plus size={14} /> Trip Baru</button>
+            <button onClick={() => setShowNew(true)} className="btn btn-primary btn-sm"><Plus size={14} /> New Trip</button>
           </div>
         </div>
       </header>
@@ -125,7 +125,7 @@ function AppContent() {
               <button onClick={() => void loadTrips()} className="btn btn-ghost btn-sm !px-2 !py-1"><RefreshCw size={12} /> Refresh</button>
             </div>
             <div className="mt-3 flex flex-col gap-2">
-              {trips.length === 0 && <div className="rounded-xl border border-dashed bg-[var(--surface-2)] p-5 text-center text-[13px] text-muted-foreground">Belum ada trip. Klik <b>Demo Seed</b>.</div>}
+              {trips.length === 0 && <div className="rounded-xl border border-dashed bg-[var(--surface-2)] p-5 text-center text-[13px] text-muted-foreground">No trips yet. Click <b>Demo Seed</b>.</div>}
               {trips.length === 0 && [1, 2].map(i => <Skeleton key={i} h={62} r={12} />)}
               {trips.map(t => (
                 <button key={t.id} onClick={() => setSelected(t.id)} className="flex flex-col gap-1.5 rounded-xl border p-3 text-left transition-all" style={{ borderColor: selected === t.id ? "var(--navy)" : "hsl(var(--border))", background: selected === t.id ? "color-mix(in oklch, var(--navy) 6%, white)" : "var(--surface)" }}>
@@ -154,13 +154,13 @@ function AppContent() {
                   </div>
                 </div>
               ))}
-              {events.length === 0 && <div className="py-3 text-center text-xs text-muted-foreground">Belum ada event — inject di bawah.</div>}
+              {events.length === 0 && <div className="py-3 text-center text-xs text-muted-foreground">No events yet — inject below.</div>}
             </div>
             <div className="mt-2.5 flex flex-wrap gap-1.5">
-              <button onClick={() => void inject("TOKYO_SEVERE_WEATHER")} className="btn btn-outline btn-sm">Badai Tokyo</button>
+              <button onClick={() => void inject("TOKYO_SEVERE_WEATHER")} className="btn btn-outline btn-sm">Tokyo Storm</button>
               <button onClick={() => void inject("AIRPORT_STRIKE")} className="btn btn-outline btn-sm">Strike</button>
-              <button onClick={() => void inject("AIRLINE_CANCELLATION")} className="btn btn-outline btn-sm">Batal Maskapai</button>
-              <button onClick={() => void weatherCheck()} className="btn btn-outline btn-sm"><CloudSun size={12} /> Cek Cuaca</button>
+              <button onClick={() => void inject("AIRLINE_CANCELLATION")} className="btn btn-outline btn-sm">Airline Cancel</button>
+              <button onClick={() => void weatherCheck()} className="btn btn-outline btn-sm"><CloudSun size={12} /> Check Weather</button>
             </div>
           </Card>
         </aside>
@@ -169,9 +169,9 @@ function AppContent() {
           {!detail && (
             <Card className="p-10 text-center">
               <div className="mx-auto grid size-12 place-items-center rounded-xl border bg-[var(--surface-2)]"><Plane size={20} className="text-[var(--navy)]" /></div>
-              <h2 className="mt-3 text-balance text-[18px] font-extrabold tracking-tight text-[var(--navy)]">Pilih trip untuk melihat detail</h2>
-              <p className="mx-auto mt-1.5 max-w-[48ch] text-pretty text-[13px] text-muted-foreground">Klik trip di kiri. Sistem tampilkan booking, domino graph, risiko, dan 3 rencana pemulihan.</p>
-              <button onClick={() => void demoSeed()} className="btn btn-primary mt-4">Demo Seed Sekarang</button>
+              <h2 className="mt-3 text-balance text-[18px] font-extrabold tracking-tight text-[var(--navy)]">Select a trip to view details</h2>
+              <p className="mx-auto mt-1.5 max-w-[48ch] text-pretty text-[13px] text-muted-foreground">Click a trip on the left. View bookings, dependency graph, risk, and 3 recovery plans.</p>
+              <button onClick={() => void demoSeed()} className="btn btn-primary mt-4">Run Demo Seed Now</button>
             </Card>
           )}
 
@@ -183,9 +183,9 @@ function AppContent() {
                   <div className="flex flex-wrap items-center gap-2.5"><Badge state={detail.risk_state} /><span className="font-extrabold tabular-nums">{detail.intervention_score.toFixed(1)}</span><div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-200"><i className="block h-full rounded-full" style={{ width: `${Math.min(100, detail.intervention_score)}%`, background: detail.risk_state === "MONITOR" ? "var(--success)" : detail.risk_state === "ELEVATED" ? "var(--warning)" : "var(--danger)" }} /></div></div>
                 </div>
                 <div className="mt-3.5 flex flex-wrap gap-2.5">
-                  <button onClick={() => void evaluate()} className="btn btn-outline btn-sm"><AlertTriangle size={14} /> Evaluate (pakai event terbaru)</button>
+                  <button onClick={() => void evaluate()} className="btn btn-outline btn-sm"><AlertTriangle size={14} /> Evaluate (using latest event)</button>
                   <button onClick={() => void analyze()} disabled={loading} className="btn btn-primary btn-sm"><Sparkles size={14} /> Analyze → 3 Plans</button>
-                  {loading && <span className="self-center text-xs text-muted-foreground">Memproses…</span>}
+                  {loading && <span className="self-center text-xs text-muted-foreground">Processing…</span>}
                 </div>
                 <div className="mt-3.5 grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2.5">
                   <div className="rounded-xl border bg-[var(--surface-2)] p-3"><div className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Total value</div><div className="text-xl font-extrabold">{money(detail.bookings.reduce((a, b) => a + b.cost, 0))}</div></div>
@@ -211,7 +211,7 @@ function AppContent() {
 
               <div>
                 <h3 className="flex items-center gap-2 text-[13px] font-extrabold uppercase tracking-widest text-[var(--navy)]"><Sparkles size={14} /> Recovery Plans</h3>
-                {scenarios.length === 0 && <Card className="mt-2 p-4 text-center text-[13px] text-muted-foreground">Belum ada plan — klik <b>Analyze</b> untuk generate 3 opsi (A/B/C). Butuh event + score ≥65 untuk auto-trigger.</Card>}
+                {scenarios.length === 0 && <Card className="mt-2 p-4 text-center text-[13px] text-muted-foreground">No plans yet — click <b>Analyze</b> to generate 3 options (A/B/C). Needs event + score ≥65 to auto-trigger.</Card>}
                 <div className="mt-2.5 grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-3">
                   {scenarios.slice().sort((a, b) => b.overall_score - a.overall_score).map(s => (
                     <Card key={s.id} className="flex flex-col overflow-hidden p-0" style={{ borderColor: s.plan_code === "A" ? "var(--navy)" : "hsl(var(--border))" }}>
@@ -241,7 +241,7 @@ function AppContent() {
               <Card className="p-3.5">
                 <h3 className="text-[13px] font-extrabold uppercase tracking-widest text-[var(--navy)]">Agent Log</h3>
                 <div className="mt-2.5 flex flex-col">
-                  {logs.length === 0 && <div className="text-xs text-muted-foreground">Belum ada aktivitas — analyze untuk lihat 7 langkah agent.</div>}
+                  {logs.length === 0 && <div className="text-xs text-muted-foreground">No activity yet — analyze to see 7 agent steps.</div>}
                   {logs.map(l => (
                     <div key={l.id} className="flex gap-2.5 border-b border-dashed py-2 text-xs last:border-0">
                       <span className="whitespace-nowrap tabular-nums text-muted-foreground">{l.created_at?.slice(11, 16) || ""}</span>
@@ -260,21 +260,21 @@ function AppContent() {
       {showNew && (
         <div className="fixed inset-0 z-40 grid place-items-center bg-[rgba(15,23,42,.45)] p-4 backdrop-blur-sm" onClick={() => setShowNew(false)}>
           <div onClick={e => e.stopPropagation()} className="card w-[440px] max-w-[92vw] p-4">
-            <h2 className="text-base font-extrabold text-[var(--navy)]">Trip Baru</h2>
+            <h2 className="text-base font-extrabold text-[var(--navy)]">New Trip</h2>
             <div className="mt-3 flex flex-col gap-2.5">
-              <label className="text-xs text-muted-foreground">Nama<input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Liburan Jepang" className="mt-1 w-full rounded-xl border px-3 py-2.5" /></label>
+              <label className="text-xs text-muted-foreground">Nama<input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Japan Holiday" className="mt-1 w-full rounded-xl border px-3 py-2.5" /></label>
               <div className="flex gap-2.5">
-                <label className="flex-1 text-xs text-muted-foreground">Asal<input value={form.origin} onChange={e => setForm({ ...form, origin: e.target.value })} maxLength={3} className="mt-1 w-full rounded-xl border px-3 py-2.5 uppercase" /></label>
-                <label className="flex-1 text-xs text-muted-foreground">Tujuan<input value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })} maxLength={3} className="mt-1 w-full rounded-xl border px-3 py-2.5 uppercase" /></label>
+                <label className="flex-1 text-xs text-muted-foreground">Origin<input value={form.origin} onChange={e => setForm({ ...form, origin: e.target.value })} maxLength={3} className="mt-1 w-full rounded-xl border px-3 py-2.5 uppercase" /></label>
+                <label className="flex-1 text-xs text-muted-foreground">Destination<input value={form.destination} onChange={e => setForm({ ...form, destination: e.target.value })} maxLength={3} className="mt-1 w-full rounded-xl border px-3 py-2.5 uppercase" /></label>
               </div>
               <div className="flex gap-2.5">
-                <label className="flex-1 text-xs text-muted-foreground">Berangkat<input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2.5" /></label>
-                <label className="flex-1 text-xs text-muted-foreground">Pulang<input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2.5" /></label>
+                <label className="flex-1 text-xs text-muted-foreground">Departure<input type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2.5" /></label>
+                <label className="flex-1 text-xs text-muted-foreground">Return<input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })} className="mt-1 w-full rounded-xl border px-3 py-2.5" /></label>
               </div>
             </div>
             <div className="mt-3.5 flex justify-end gap-2">
-              <button onClick={() => setShowNew(false)} className="btn btn-ghost btn-sm">Batal</button>
-              <button onClick={() => void createTrip()} className="btn btn-primary btn-sm">Simpan</button>
+              <button onClick={() => setShowNew(false)} className="btn btn-ghost btn-sm">Cancel</button>
+              <button onClick={() => void createTrip()} className="btn btn-primary btn-sm">Save</button>
             </div>
           </div>
         </div>
