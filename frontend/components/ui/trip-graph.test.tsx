@@ -24,7 +24,20 @@ describe("TripGraph", () => {
     expect(html).not.toContain('x1="155" y1="62" x2="485" y2="62"')
     expect(html).toContain('role="img"')
     expect(html).toContain('aria-describedby="trip-graph-description-42"')
+    expect(html).toContain("Nodes: Flight to Tokyo (flight, CONFIRMED, starts 2026-09-01T08:00); Hotel in Tokyo (hotel, CONFIRMED, starts 2026-09-01T15:00)")
     expect(html).toContain("Directed dependencies: Flight to Tokyo precedes Hotel in Tokyo.")
+
+  })
+  test("clips visible titles to the rendered node width while retaining the full title", () => {
+    const title = "Very long booking title for Tokyo airport connection"
+    const html = renderToStaticMarkup(
+      <TripGraph graph={{ ...graph, nodes: [{ ...graph.nodes[0], title }] }} affectedBookingIds={[10]} />,
+    )
+
+    expect(html).toContain('clipPath id="trip-graph-title-clip-42-10"')
+    expect(html).toContain('clip-path="url(#trip-graph-title-clip-42-10)"')
+    expect(html).toContain('textLength="166"')
+    expect(html).toContain(`aria-label="${title}, flight, CONFIRMED, affected"`)
   })
 
   test("marks affected nodes with text as well as visual styling", () => {
@@ -42,6 +55,16 @@ describe("TripGraph", () => {
     expect(html).toContain("Some dependencies could not be displayed")
     expect(html).toContain("Booking 99")
   })
+  test("renders self-referential dependencies as readable loops", () => {
+    const html = renderToStaticMarkup(
+      <TripGraph graph={{ ...graph, edges: [{ source: 10, target: 10, relation_type: "repeats" }] }} />,
+    )
+
+    expect(html).toContain('aria-label="repeats: 10 to 10"')
+    expect(html).toMatch(/<path[^>]+data-edge-kind="self-loop"[^>]+marker-end="url\(#trip-graph-arrow\)"/)
+    expect(html).not.toMatch(/(?:NaN|Infinity)/)
+  })
+
 
   test("truncates long node titles without losing their accessible label", () => {
     const title = "Very long booking title for Tokyo airport connection"

@@ -27,6 +27,9 @@ const COLUMN_GAP = 60
 const ROW_GAP = 22
 const LEFT_PADDING = 20
 const TOP_PADDING = 24
+const NODE_TITLE_LEFT_PADDING = 14
+const NODE_TITLE_RIGHT_PADDING = 14
+const AFFECTED_LABEL_RESERVED_WIDTH = 76
 const MAX_NODE_TITLE_LENGTH = 34
 
 function nodePosition(index: number) {
@@ -49,11 +52,17 @@ function nodeEdgePoint(node: { x: number; y: number }, toward: { x: number; y: n
   return { x: centerX + dx * scale, y: centerY + dy * scale }
 }
 
+function selfLoopPath(node: { x: number; y: number }) {
+  const startX = node.x + NODE_WIDTH / 3
+  const endX = node.x + (NODE_WIDTH * 2) / 3
+  const controlY = node.y - 24
+  return `M ${startX} ${node.y} C ${startX} ${controlY}, ${endX} ${controlY}, ${endX} ${node.y}`
+}
 
 function graphDescription(graph: TripGraphData) {
   const titles = new Map(graph.nodes.map((node) => [node.id, node.title]))
   const nodes = graph.nodes.length
-    ? graph.nodes.map((node) => `${node.title} (${node.booking_type}, ${node.status})`).join("; ")
+    ? graph.nodes.map((node) => `${node.title} (${node.booking_type}, ${node.status}, starts ${node.start_time})`).join("; ")
     : "none"
   const dependencies = graph.edges.length
     ? graph.edges
@@ -103,18 +112,38 @@ export function TripGraph({ graph, affectedBookingIds = [] }: { graph: TripGraph
               <marker id="trip-graph-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
                 <path d="M0,0 L8,4 L0,8 z" fill="currentColor" />
               </marker>
+              {graph.nodes.map((node, index) => {
+                const { x, y } = nodePosition(index)
+                const isAffected = affected.has(node.id)
+                const titleWidth = NODE_WIDTH - NODE_TITLE_LEFT_PADDING - NODE_TITLE_RIGHT_PADDING - (isAffected ? AFFECTED_LABEL_RESERVED_WIDTH : 0)
+                return (
+                  <clipPath key={node.id} id={`trip-graph-title-clip-${graph.trip_id}-${node.id}`} clipPathUnits="userSpaceOnUse">
+                    <rect x={x + NODE_TITLE_LEFT_PADDING} y={y + 6} width={titleWidth} height="20" />
+                  </clipPath>
+                )
+              })}
             </defs>
             <g aria-label="Dependency edges">
               {graph.edges.map((edge, index) => {
                 const source = positions.get(edge.source)
                 const target = positions.get(edge.target)
                 if (!source || !target) return null
+                const edgeLabel = `${edge.relation_type}: ${edge.source} to ${edge.target}`
+                const isSelfLoop = edge.source === edge.target
+                if (isSelfLoop) {
+                  return (
+                    <g key={`${edge.source}-${edge.target}-${edge.relation_type}-${index}`} aria-label={edgeLabel}>
+                      <path d={selfLoopPath(source)} data-edge-kind="self-loop" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="6 4" markerEnd="url(#trip-graph-arrow)" />
+                      <text x={source.x + NODE_WIDTH / 2} y={source.y - 6} textAnchor="middle" className="fill-current text-[10px] font-semibold">{edge.relation_type}</text>
+                    </g>
+                  )
+                }
                 const sourceCenter = { x: source.x + NODE_WIDTH / 2, y: source.y + NODE_HEIGHT / 2 }
                 const targetCenter = { x: target.x + NODE_WIDTH / 2, y: target.y + NODE_HEIGHT / 2 }
                 const start = nodeEdgePoint(source, targetCenter)
                 const end = nodeEdgePoint(target, sourceCenter)
                 return (
-                  <g key={`${edge.source}-${edge.target}-${edge.relation_type}-${index}`} aria-label={`${edge.relation_type}: ${edge.source} to ${edge.target}`}>
+                  <g key={`${edge.source}-${edge.target}-${edge.relation_type}-${index}`} aria-label={edgeLabel}>
                     <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="currentColor" strokeWidth="2" strokeDasharray="6 4" markerEnd="url(#trip-graph-arrow)" />
                     <text x={(start.x + end.x) / 2} y={(start.y + end.y) / 2 - 6} textAnchor="middle" className="fill-current text-[10px] font-semibold">{edge.relation_type}</text>
                   </g>
@@ -127,14 +156,17 @@ export function TripGraph({ graph, affectedBookingIds = [] }: { graph: TripGraph
                 const isAffected = affected.has(node.id)
                 const description = `${node.title}, ${node.booking_type}, ${node.status}${isAffected ? ", affected" : ""}`
                 const displayTitle = node.title.length > MAX_NODE_TITLE_LENGTH ? `${node.title.slice(0, MAX_NODE_TITLE_LENGTH - 3)}…` : node.title
+                const titleWasTruncated = displayTitle !== node.title
+                const titleWidth = NODE_WIDTH - NODE_TITLE_LEFT_PADDING - NODE_TITLE_RIGHT_PADDING - (isAffected ? AFFECTED_LABEL_RESERVED_WIDTH : 0)
+                const titleClipId = `trip-graph-title-clip-${graph.trip_id}-${node.id}`
                 return (
                   <g key={node.id} data-node-id={node.id} role="group" aria-label={description}>
                     <title>{node.title}</title>
                     <rect x={x} y={y} width={NODE_WIDTH} height={NODE_HEIGHT} rx="12" fill={isAffected ? "#fff7ed" : "white"} stroke={isAffected ? "#c2410c" : "currentColor"} strokeWidth={isAffected ? "3" : "1.5"} />
-                    <text x={x + 14} y={y + 22} className="fill-current text-[13px] font-bold">{displayTitle}</text>
-                    <text x={x + 14} y={y + 42} className="fill-current text-[11px]">{node.booking_type} · {node.status}</text>
-                    <text x={x + 14} y={y + 60} className="fill-current text-[10px]">Starts {node.start_time}</text>
-                    {isAffected && <text x={x + NODE_WIDTH - 14} y={y + 22} textAnchor="end" className="fill-[#9a3412] text-[10px] font-extrabold uppercase tracking-wider">Affected</text>}
+                    <text x={x + NODE_TITLE_LEFT_PADDING} y={y + 22} clipPath={`url(#${titleClipId})`} textLength={titleWasTruncated ? titleWidth : undefined} lengthAdjust={titleWasTruncated ? "spacingAndGlyphs" : undefined} className="fill-current text-[13px] font-bold">{displayTitle}</text>
+                    <text x={x + NODE_TITLE_LEFT_PADDING} y={y + 42} className="fill-current text-[11px]">{node.booking_type} · {node.status}</text>
+                    <text x={x + NODE_TITLE_LEFT_PADDING} y={y + 60} className="fill-current text-[10px]">Starts {node.start_time}</text>
+                    {isAffected && <text x={x + NODE_WIDTH - NODE_TITLE_RIGHT_PADDING} y={y + 22} textAnchor="end" className="fill-[#9a3412] text-[10px] font-extrabold uppercase tracking-wider">Affected</text>}
                   </g>
                 )
               })}
