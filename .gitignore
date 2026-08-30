@@ -5,3 +5,4 @@ __pycache__/
 backend/trip_continuity.db
 backend/.venv/
 .venv/
+artifacts-run/
