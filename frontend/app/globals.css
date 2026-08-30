@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --primary: 208 100% 33%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 215 16% 47%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 20% 96%;
+    --accent-foreground: 222 47% 11%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 208 100% 33%;
+    --radius: 0.875rem;
+    /* Kru OKLCH overrides for custom */
+    --navy: oklch(0.28 0.06 260);
+    --navy-2: oklch(0.35 0.05 260);
+    --bg: oklch(0.97 0 0);
+    --surface: oklch(1 0 0);
+    --surface-2: oklch(0.98 0.005 240);
+    --danger: oklch(0.58 0.18 25);
+    --success: oklch(0.65 0.15 145);
+    --warning: oklch(0.75 0.13 70);
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { background: var(--bg); color: hsl(var(--foreground)); font-feature-settings: "rlig" 1, "calt" 1; }
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-inter),system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid hsl(var(--ring));outline-offset:2px}
+.muted{color:hsl(var(--muted))}
+.card{background:var(--surface);border:1px solid hsl(var(--border));border-radius:var(--radius)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:9999px;font-weight:600;font-size:14px;border:1px solid transparent;cursor:pointer;transition:background 150ms ease-out,border-color 150ms ease-out,transform 150ms ease-out;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn-primary:hover{background:var(--navy-2)}
+.btn-ghost{background:color-mix(in oklch, var(--navy) 8%, transparent);color:var(--navy);border-color:transparent}
+.btn-ghost:hover{background:color-mix(in oklch, var(--navy) 12%, transparent)}
+.btn-outline{background:var(--surface);color:var(--navy);border-color:hsl(var(--border))}
+.btn-outline:hover{background:var(--surface-2)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:9999px;font-size:11px;font-weight:700;letter-spacing:.02em}
+.badge i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.badge-MONITOR{background:oklch(0.96 0.04 145);color:oklch(0.45 0.12 145)}
+.badge-ELEVATED{background:oklch(0.96 0.04 70);color:oklch(0.5 0.12 70)}
+.badge-PREPARE{background:oklch(0.93 0.05 25);color:oklch(0.5 0.15 25)}
+.badge-ACT{background:oklch(0.88 0.08 25);color:oklch(0.4 0.15 25)}
+.skeleton{background:linear-gradient(90deg, oklch(0.96 0.005 260) 25%, oklch(0.94 0.005 260) 37%, oklch(0.96 0.005 260) 63%);background-size:400% 100%;animation:shimmer 1.2s ease-in-out infinite}
+@keyframes shimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
