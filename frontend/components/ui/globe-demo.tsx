@@ -14,7 +14,7 @@ export function GlobeDemo() {
       >
         Kru Is All You Need
       </h1>
-      <Globe className="top-28" />
+      <Globe className="top-28 h-[min(100svh,100vw)] w-[min(100svh,100vw)] max-w-none" />
       <div className="pointer-events-none absolute inset-0 h-full bg-[radial-gradient(circle_at_50%_200%,rgba(0,0,0,0.2),rgba(255,255,255,0))]" />
     </section>
   )
