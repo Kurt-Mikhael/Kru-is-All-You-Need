@@ -1,0 +1,7 @@
+__pycache__
+*.pyc
+*.pyo
+.venv
+trip_continuity.db
+.env.local
+.git
