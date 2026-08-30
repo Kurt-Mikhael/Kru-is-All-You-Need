@@ -110,6 +110,30 @@ def test_operational_disruption_targets_flight_dependency_cascade(client, monkey
         assert assessment.affected_booking_ids == [flight_id, hotel_id]
         assert unrelated_id not in assessment.affected_booking_ids
 
+def test_ordinary_evaluation_uses_location_overlap(client):
+    test_client, session_factory, trip_id, flight_id, hotel_id, unrelated_id = client
+
+    with session_factory() as db:
+        event = RiskEvent(
+            event_type="AIRPORT_STRIKE",
+            location="JFK",
+            severity=0.5,
+            confidence=0.8,
+            start_time="20260901T060000",
+            expected_duration="24h",
+            source="demo",
+        )
+        db.add(event)
+        db.commit()
+        db.refresh(event)
+        risk_event_id = event.id
+
+    response = test_client.post(
+        f"/api/risk/evaluate/{trip_id}?risk_event_id={risk_event_id}"
+    )
+
+    assert response.status_code == 200
+    assert response.json()["affected_booking_ids"] == [flight_id]
 
 def test_operational_disruption_rejects_invalid_booking_input(client):
     test_client, session_factory, trip_id, flight_id, hotel_id, unrelated_id = client

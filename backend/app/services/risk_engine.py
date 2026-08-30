@@ -113,6 +113,11 @@ def _exposed_bookings(
         exposed = bookings[:]
     return exposed
 
+def _overlaps(value: str, locs: set[str]) -> bool:
+    value = value.upper()
+    return any(loc.upper() in value or value in loc.upper() for loc in locs)
+
+
 def _time_factor(start_date: str) -> float:
     try:
         dep = datetime.strptime(start_date, "%Y-%m-%d")
