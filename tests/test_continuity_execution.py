@@ -197,3 +197,110 @@ def test_execute_returns_updated_state_and_action_provenance(client, monkeypatch
         assert scenario.status == "EXECUTED"
         assert db.get(Booking, flight_id).start_time == "20260901T1200"
         assert db.get(Booking, hotel_id).start_time == "20260902T1000"
+def test_cancel_action_persists_cancelled_state(client):
+    test_client, session_factory, trip_id, _, hotel_id, event_id = client
+    scenario_id = _create_scenario(
+        session_factory,
+        trip_id,
+        event_id,
+        [{"booking_id": hotel_id, "action": "CANCEL"}],
+    )
+
+    response = test_client.post(f"/api/continuity/scenarios/{scenario_id}/execute")
+
+    assert response.status_code == 200
+    result = response.json()["results"][0]
+    assert result["action"] == "CANCEL"
+    assert result["status"] == "CANCELLED"
+    assert result["new_time"] == "20260901T2200"
+
+    with session_factory() as db:
+        assert db.get(Booking, hotel_id).status == "CANCELLED"
+
+
+def test_empty_rebook_time_preserves_existing_time(client, monkeypatch):
+    test_client, session_factory, trip_id, flight_id, _, event_id = client
+    scenario_id = _create_scenario(
+        session_factory,
+        trip_id,
+        event_id,
+        [
+            {
+                "booking_id": flight_id,
+                "action": "REBOOK",
+                "new_time": "",
+                "flight_number": "MU123",
+            }
+        ],
+    )
+    monkeypatch.setattr(
+        "backend.app.agents.continuity_agent.adapter.book_alternative_flight",
+        lambda alternative, passengers=1: {"provider": "MOCK", "simulated": True},
+    )
+
+    response = test_client.post(f"/api/continuity/scenarios/{scenario_id}/execute")
+
+    assert response.status_code == 200
+    assert response.json()["results"][0]["new_time"] == "20260901T0900"
+    with session_factory() as db:
+        assert db.get(Booking, flight_id).start_time == "20260901T0900"
+
+
+def test_execution_response_preserves_provider_result_fields(client, monkeypatch):
+    test_client, session_factory, trip_id, flight_id, _, event_id = client
+    scenario_id = _create_scenario(
+        session_factory,
+        trip_id,
+        event_id,
+        [
+            {
+                "booking_id": flight_id,
+                "action": "REBOOK",
+                "new_time": "20260901T1200",
+                "flight_number": "MU123",
+            }
+        ],
+    )
+    provider_result = {
+        "provider": "ATLAS",
+        "order_no": "ORD-1",
+        "pnr": "PNR-1",
+        "flight": "MU123",
+        "price": 650,
+        "total": 660,
+        "external_ref": "EXT-1",
+        "ticketed": True,
+        "confirmation_code": "CONF-1",
+    }
+    monkeypatch.setattr(
+        "backend.app.agents.continuity_agent.adapter.book_alternative_flight",
+        lambda alternative, passengers=1: provider_result,
+    )
+
+    response = test_client.post(f"/api/continuity/scenarios/{scenario_id}/execute")
+
+    assert response.status_code == 200
+    result = response.json()["results"][0]
+    assert {key: result[key] for key in provider_result} == provider_result
+    assert result["external_ref"] == "EXT-1"
+    with session_factory() as db:
+        assert db.get(Booking, flight_id).external_ref == "ORD-1"
+
+
+def test_keep_result_is_safe_for_static_consumer(client):
+    test_client, session_factory, trip_id, flight_id, _, event_id = client
+    scenario_id = _create_scenario(
+        session_factory,
+        trip_id,
+        event_id,
+        [{"booking_id": flight_id, "action": "KEEP"}],
+    )
+
+    response = test_client.post(f"/api/continuity/scenarios/{scenario_id}/execute")
+
+    assert response.status_code == 200
+    result = response.json()["results"][0]
+    assert result["action"] == "KEEP"
+    assert result["provider"] == ""
+    assert result["simulated"] is False
+    assert result["provenance"] == "UNCHANGED"

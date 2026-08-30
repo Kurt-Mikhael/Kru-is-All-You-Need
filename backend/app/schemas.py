@@ -176,6 +176,8 @@ class TripGraphOut(BaseModel):
 
 
 class ExecutionResultOut(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     booking_id: int
     title: str
     booking_type: str
@@ -185,7 +187,12 @@ class ExecutionResultOut(BaseModel):
     provider: str = ""
     simulated: bool = False
     provenance: str = ""
-
+    order_no: Any = None
+    pnr: Any = None
+    flight: Any = None
+    price: Any = None
+    total: Any = None
+    external_ref: Any = None
 
 class ScenarioExecutionOut(BaseModel):
     scenario_id: int

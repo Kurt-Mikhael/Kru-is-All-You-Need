@@ -124,7 +124,7 @@ def execute_scenario(db: Session, scenario: Scenario) -> list[dict]:
             continue
 
         action_name = str(action.get("action", "KEEP")).upper()
-        new_time = action.get("new_time", booking.start_time)
+        new_time = action.get("new_time") or booking.start_time
         if action_name == "KEEP":
             results.append(
                 {
@@ -134,9 +134,27 @@ def execute_scenario(db: Session, scenario: Scenario) -> list[dict]:
                     "action": action_name,
                     "new_time": booking.start_time,
                     "status": booking.status,
-                    "provider": booking.provider,
+                    "provider": "",
                     "simulated": False,
                     "provenance": "UNCHANGED",
+                }
+            )
+            continue
+
+        if action_name == "CANCEL":
+            booking.status = "CANCELLED"
+            db.add(booking)
+            results.append(
+                {
+                    "booking_id": booking.id,
+                    "title": booking.title,
+                    "booking_type": booking.booking_type,
+                    "action": action_name,
+                    "new_time": booking.start_time,
+                    "status": booking.status,
+                    "provider": "",
+                    "simulated": True,
+                    "provenance": "SIMULATED",
                 }
             )
             continue
