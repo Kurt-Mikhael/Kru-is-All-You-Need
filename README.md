@@ -1,98 +1,95 @@
 # Kru is All You Need
 
-Agentic Trip Continuity Platform — AI agent yang memantau trip perjalanan secara otomatis dan menyusun rencana pemulihan (recovery plan) ketika risiko muncul — cuaca buruk, konflik geopolitik, atau pembatalan maskapai.
+Agentic Trip Continuity Platform — predicts disruption, assesses risk, and executes recovery with one approval. Flight rebooking via Atlas sandbox; hotel/transport simulated.
 
-**Konsep:** user cukup 2x interaksi — input data booking di awal, klik approve di tengah. Sistem yang jalankan sisanya: pantau → deteksi bahaya → nilai risiko → susun rencana → eksekusi (flight rebooking via Atlas sandbox).
+> **Flow:** monitor → detect → score → plan → approve → execute → protected (MONITOR 18.5).
 
-## Fitur
+## Features
 
-- **Risk monitoring otomatis** — scheduler setiap N menit mengecek:
-  - Cuaca parah via [Open-Meteo](https://open-meteo.com) (real)
-  - Geopolitik via [FCDO UK gov.uk](https://www.gov.uk/foreign-travel-advice) (real), fallback [GDELT](https://www.gdeltproject.org)
-- **Risk scoring** — 6 faktor berbobot (severity×confidence, exposure, time-to-departure, deadline proximity, financial, dependency) → state `MONITOR` < 40, `ELEVATED` 40–64, `PREPARE` 65–79, `ACT` ≥ 80
-- **Financial exposure** — nilai uang yang terancam per booking (refundability × deadline)
-- **Agentic analysis (Groq LLM)** — interpretasi risiko, generate 3 skenario pemulihan, rationale; divalidasi deterministik (aksi REBOOK wajib pakai flight dari hasil search Atlas)
-- **Scenario ranking** — continuity, value preserved, residual risk, cost efficiency, user fit
-- **Single approval** — eksekusi hanya setelah user approve
-- **Flight rebooking real** — `search.do → verify.do → order.do → pay.do → queryOrderDetails.do` di sandbox Atlas; fallback simulasi bila gagal
-- **Trip graph & dependencies** — booking dependency (tour → hotel → flight)
+- **Autonomous monitoring** — `monitor_loop` polls Open-Meteo (weather) + FCDO/GDELT (geopolitical) every `MONITOR_INTERVAL_MINUTES`
+- **Deterministic scoring** — 6 weighted drivers (severity×confidence, exposure, time-to-departure, deadline, financial, dependency) → `MONITOR <40` / `ELEVATED 40-64` / `PREPARE 65-79` / `ACT ≥80`
+- **Trip Graph** — `flight → transfer → hotel → activity` domino, affected bookings highlighted
+- **Financial exposure** — total / refundable / non-refundable / expiring soon / recoverable
+- **Agentic planning (Groq `llama-3.3-70b-versatile`)** — 3 coordinated scenarios + rationale; REBOOK validated against `Atlas.search`
+- **One-click recovery** — `Approve & Execute` rebooks flight (Live/Mock) and reschedules dependents, trip turns `MONITOR + Protected ✓`
+- **Predictive vs reactive** — `SEVERE_WEATHER / STRIKE` vs `OPERATIONAL_DISRUPTION` (by `flight_booking_id`)
 
-## Arsitektur
+## Architecture
 
 ```
-backend/
-├── app/
-│   ├── main.py                 # entrypoint FastAPI + lifespan monitor
-│   ├── config.py               # env vars (Groq, database, monitor)
-│   ├── models.py / schemas.py  # ORM + Pydantic
-│   ├── monitor.py              # background loop: collect events → evaluate → auto-analyze
-│   ├── api/                    # REST routes (trips, bookings, risks, flights, continuity, demo)
-│   ├── agents/                 # llm_client, scenario_generator, scenario_ranker, continuity_agent
-│   ├── services/               # risk_engine, financial_exposure, trip_graph, policy_engine
-│   └── integrations/
-│       ├── atlas/              # client (search/verify/order/pay/query), mapper, fixtures, adapter
-│       ├── geopolitical.py     # FCDO primary + GDELT fallback
-│       ├── weather.py          # Open-Meteo primary + mock fallback
-│       └── mock_providers.py   # simulated execution (hotel/transport/activity)
+backend/app/main.py              # FastAPI + lifespan monitor
+backend/app/monitor.py           # collect → evaluate → auto-analyze (≥65)
+backend/app/api/                 # trips, bookings, risks, flights, continuity, demo
+backend/app/agents/              # llm_client, scenario_generator, continuity_agent
+backend/app/services/            # risk_engine, financial_exposure, trip_graph
+backend/app/integrations/atlas/ # search/verify/order/pay/query
+frontend/app/page.tsx            # / — globe + centered Open workspace
+frontend/app/app/page.tsx        # /app — trips, events, graph, exposure, recovery
+frontend/components/ui/          # TripGraph, ExposureCards
 ```
 
 ## Quick Start
 
-```powershell
-# 1. Setup
-cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+### Docker — one command
+
+```bash
+docker compose up --build
+# frontend http://localhost:3000  (/ → Open continuity workspace → /app)
+# backend  http://localhost:8000  (/docs)
+docker compose down        # stop
+docker compose down -v     # reset DB
+```
+
+`backend/.env` is auto-loaded (`GROQ_API_KEY`, `CLIENT_KEY`, `SECRET_KEY`, `WEBHOOK_URL`).
+
+### Local — two terminals
+
+```bash
+# backend
+cd backend && python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-# 2. Env — isi GROQ_API_KEY (wajib), CLIENT_KEY/SECRET_KEY Atlas (opsional)
-# copy dari .env.example
+# frontend
+cd frontend && bun install && bun x next dev -p 3000
 ```
 
-```powershell
-# 3. Jalankan
-uvicorn app.main:app --port 8000
-```
+## Demo — 5 min (`/` → `/app`)
 
-Dokumentasi API otomatis di `http://127.0.0.1:8000/docs`.
+1. **New Trip → Load Demo Trip** (top-right of modal) — seeds `Jakarta → Tokyo` (4 bookings, 3 deps)
+2. **Risk Events → Tokyo Storm** — select `SEVERE_WEATHER Tokyo`, **Evaluate Selected Event** → `PREPARE 74` + drivers
+3. **Analyze Recovery Plans** — streams 7 agent steps → 3 plans + Recommended
+4. **Approve & Execute** — flight rebooked (Live/Mock) + rescheduled dependents → `MONITOR 18.5 + Protected ✓`
+5. **Airline Cancel** — creates `OPERATIONAL_DISRUPTION NRT` reactive (orange) → `ACT 80.5`
 
-## Alur Demo
+API alternative:
 
-```powershell
-# 1. Seed trip demo (Jakarta→Tokyo, 4 booking + dependencies)
+```bash
 POST /api/demo/seed
-
-# 2. Inject event risiko
 POST /api/risk/events/demo?scenario=TOKYO_SEVERE_WEATHER
-
-# 3. Evaluasi risiko trip
-POST /api/risk/evaluate/1?risk_event_id=<event_id>
-
-# 4. Analisis agent (3 skenario)
-POST /api/continuity/analyze/1
-
-# 5. Approve skenario terbaik
-POST /api/continuity/scenarios/1/approve
-
-# 6. Eksekusi (flight → Atlas sandbox, sisanya simulasi)
-POST /api/continuity/scenarios/1/execute
+POST /api/risk/evaluate/{tripId}?risk_event_id={eventId}
+POST /api/continuity/analyze/{tripId}?risk_event_id={id}
+POST /api/continuity/scenarios/{id}/approve
+POST /api/continuity/scenarios/{id}/execute
+POST /api/risk/events/operational-disruption?flight_booking_id={flightId}
 ```
 
-Atau biarkan monitor jalan otomatis: event cuaca/geopolitik muncul sendiri, trip dievaluasi, dan bila score ≥ `MONITOR_TRIGGER_SCORE` (65) sistem otomatis menyusun skenario — user tinggal approve.
+Monitor auto-runs when idle: new events → evaluate → auto-analyze if ≥65.
 
-## Konfigurasi (.env)
+## Configuration
 
-| Variable | Default | Keterangan |
+| Variable | Default | Notes |
 |---|---|---|
-| `GROQ_API_KEY` | — | Wajib, untuk LLM |
-| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Model Groq |
-| `DATABASE_URL` | `sqlite:///trip_continuity.db` | SQLite default; ganti ke Postgres bila perlu |
-| `MONITOR_ENABLED` | `true` | Nyalakan scheduler |
-| `MONITOR_INTERVAL_MINUTES` | `5` | Interval cek risiko |
-| `MONITOR_TRIGGER_SCORE` | `65` | Skor yang memicu auto-analyze |
-| `CLIENT_KEY` / `SECRET_KEY` | — | Kredensial Atlas (sandbox/production) |
+| `GROQ_API_KEY` | — | Required |
+| `GROQ_MODEL` | `llama-3.3-70b-versatile` |  |
+| `DATABASE_URL` | `sqlite:////data/trip_continuity.db` (docker) | Use Postgres in prod |
+| `MONITOR_ENABLED` | `true` |  |
+| `MONITOR_INTERVAL_MINUTES` | `5` |  |
+| `MONITOR_TRIGGER_SCORE` | `65` |  |
+| `CLIENT_KEY` / `SECRET_KEY` | — | Atlas sandbox/prod |
+| `WEBHOOK_URL` | — | Atlas webhook |
 
-## Referensi
+## References
 
-- [ATLAS_API_COMPLETE.md](ATLAS_API_COMPLETE.md) — integrasi API Atlas (search, verify, order, pay, query, error handling)
-- [Agentic Trip Continuity Platform — PRD](Agentic%20Trip%20Continuity%20Platform%20%E2%80%94%202-Week%20Hackathon%20PRD.md) — spesifikasi produk
+- `ATLAS_API_COMPLETE.md`
+- `Agentic Trip Continuity Platform — 2-Week Hackathon PRD.md`
