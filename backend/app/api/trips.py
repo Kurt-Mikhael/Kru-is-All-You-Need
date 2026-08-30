@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Booking, Trip
-from ..schemas import BookingCreate, BookingOut, TripCreate, TripDetail, TripOut
+from ..schemas import BookingCreate, BookingOut, FinancialExposureOut, TripCreate, TripDetail, TripOut
+from ..services import financial_exposure
 
 router = APIRouter(prefix="/api/trips", tags=["trips"])
 
@@ -41,6 +42,13 @@ def get_trip(trip_id: int, db: Session = Depends(get_db)):
     if not trip:
         raise HTTPException(404, "trip not found")
     return trip
+
+
+@router.get("/{trip_id}/exposure", response_model=FinancialExposureOut)
+def get_exposure(trip_id: int, db: Session = Depends(get_db)):
+    if not db.get(Trip, trip_id):
+        raise HTTPException(404, "trip not found")
+    return financial_exposure.get_financial_exposure(db, trip_id)
 
 
 @router.post("/{trip_id}/bookings", response_model=BookingOut)
