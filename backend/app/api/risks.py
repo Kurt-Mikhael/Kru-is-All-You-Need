@@ -47,14 +47,29 @@ def inject_demo(scenario: str, db: Session = Depends(get_db)):
 
 @router.post("/events/operational-disruption")
 def operational_disruption(flight_booking_id: int, db: Session = Depends(get_db)):
+    booking = db.get(Booking, flight_booking_id)
+    if not booking:
+        raise HTTPException(404, "flight booking not found")
+    if (booking.booking_type or "").upper() != "FLIGHT":
+        raise HTTPException(400, "booking must be a flight booking")
+
+    trip = db.get(Trip, booking.trip_id)
+    if not trip:
+        raise HTTPException(400, "flight booking must belong to a trip")
+
+    location = (booking.location or "").strip() or (trip.origin or "").strip() or (trip.destination or "").strip()
+    if not location:
+        raise HTTPException(400, "flight booking has no location")
+
     event = RiskEvent(
         event_type="OPERATIONAL_DISRUPTION",
-        location="",
+        location=location,
         severity=1.0,
         confidence=1.0,
-        start_time="now",
+        start_time=booking.start_time,
         expected_duration="48h",
-        source="airline",
+        source="airline_reactive",
+        status="REACTIVE",
     )
     db.add(event)
     db.commit()
@@ -63,17 +78,14 @@ def operational_disruption(flight_booking_id: int, db: Session = Depends(get_db)
     from ..agents.continuity_agent import run_analysis
     from ..monitor import _already_analyzed
 
-    results = []
-    trips = db.scalars(select(Trip)).all()
-    for trip in trips:
-        if _already_analyzed(db, trip.id, event.id):
-            continue
-        booking = db.get(Booking, flight_booking_id)
-        if not booking or booking.trip_id != trip.id:
-            continue
-        assessment = risk_engine.evaluate_trip(db, trip.id, event.id)
+    if _already_analyzed(db, trip.id, event.id):
+        results = []
+    else:
+        assessment = risk_engine.evaluate_trip(
+            db, trip.id, event.id, target_booking_ids=[booking.id]
+        )
         run_analysis(db, trip, event, assessment)
-        results.append({"trip_id": trip.id, "analyzed": True})
+        results = [{"trip_id": trip.id, "analyzed": True}]
     return {"event": event, "recovery": results}
 
 

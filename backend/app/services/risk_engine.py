@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import Booking, BookingDependency, RiskAssessment, RiskEvent, Trip
+from ..services import trip_graph
 
 RISK_STATES = [
     (80.0, "ACT"),
@@ -28,14 +29,19 @@ EVENT_LOCATION_MAP = {
 }
 
 
-def evaluate_trip(db: Session, trip_id: int, risk_event_id: int) -> RiskAssessment:
+def evaluate_trip(
+    db: Session,
+    trip_id: int,
+    risk_event_id: int,
+    target_booking_ids: list[int] | None = None,
+) -> RiskAssessment:
     trip = db.get(Trip, trip_id)
     event = db.get(RiskEvent, risk_event_id)
     if not trip or not event:
         raise ValueError("trip or risk event not found")
 
     bookings = db.scalars(select(Booking).where(Booking.trip_id == trip_id)).all()
-    exposed = _exposed_bookings(trip, event, bookings)
+    exposed = _exposed_bookings(db, trip, event, bookings, target_booking_ids)
 
     exposure_factor = len(exposed) / max(1, len(bookings))
     time_to_departure = _time_factor(trip.start_date)
@@ -83,23 +89,29 @@ def evaluate_trip(db: Session, trip_id: int, risk_event_id: int) -> RiskAssessme
     return assessment
 
 
-def _exposed_bookings(trip: Trip, event: RiskEvent, bookings: list[Booking]) -> list[Booking]:
+def _exposed_bookings(
+    db: Session,
+    trip: Trip,
+    event: RiskEvent,
+    bookings: list[Booking],
+    target_booking_ids: list[int] | None = None,
+) -> list[Booking]:
+    if target_booking_ids is not None:
+        affected_ids = set(
+            trip_graph.get_affected_bookings(db, trip.id, target_booking_ids)
+        )
+        return [booking for booking in bookings if booking.id in affected_ids]
+
     event_locs = EVENT_LOCATION_MAP.get(event.location, set())
     if not event_locs:
         event_locs = {event.location}
     exposed = []
-    for b in bookings:
-        if _overlaps(b.location, event_locs) or _overlaps(b.booking_type, event_locs):
-            exposed.append(b)
+    for booking in bookings:
+        if _overlaps(booking.location, event_locs) or _overlaps(booking.booking_type, event_locs):
+            exposed.append(booking)
     if not exposed and any(loc in (trip.origin, trip.destination) for loc in event_locs):
         exposed = bookings[:]
     return exposed
-
-
-def _overlaps(value: str, locs: set[str]) -> bool:
-    value = value.upper()
-    return any(loc.upper() in value or value in loc.upper() for loc in locs)
-
 
 def _time_factor(start_date: str) -> float:
     try:
