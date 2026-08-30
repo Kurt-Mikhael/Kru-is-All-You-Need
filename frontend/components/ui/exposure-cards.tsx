@@ -18,12 +18,7 @@ const fields: Array<{ key: keyof FinancialExposure; label: string }> = [
   { key: "potential_recovery_value", label: "Potential recovery value" },
 ]
 
-function formatMoney(value: number, currency: string) {
-  const amount = money(value).replace(/^\$/, "")
-  return currency === "$" ? `$${amount}` : `${currency} ${amount}`
-}
-
-export function ExposureCards({ exposure, currency = "$" }: { exposure: FinancialExposure | null; currency?: string }): JSX.Element {
+export function ExposureCards({ exposure, currency = "USD" }: { exposure: FinancialExposure | null; currency?: string }): JSX.Element {
   return (
     <section className="card p-4" aria-label="Financial exposure">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -37,7 +32,7 @@ export function ExposureCards({ exposure, currency = "$" }: { exposure: Financia
           {fields.map(({ key, label }, index) => (
             <div key={key} className={`rounded-xl border p-3 ${index === 0 ? "bg-[var(--surface-2)]" : "bg-white"}`}>
               <dt className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">{label}</dt>
-              <dd className="mt-1 text-xl font-extrabold tabular-nums">{formatMoney(exposure[key], currency)}</dd>
+              <dd className="mt-1 text-xl font-extrabold tabular-nums">{money(exposure[key], currency)}</dd>
             </div>
           ))}
         </dl>

@@ -12,7 +12,7 @@ const graph: TripGraphData = {
 }
 
 describe("TripGraph", () => {
-  test("renders directed dependencies and readable node details", () => {
+  test("renders directed dependencies from node boundaries and exposes a text summary", () => {
     const html = renderToStaticMarkup(<TripGraph graph={graph} />)
 
     expect(html).toContain("Trip dependency graph")
@@ -20,7 +20,11 @@ describe("TripGraph", () => {
     expect(html).toContain("Hotel in Tokyo")
     expect(html).toContain("precedes")
     expect(html).toContain('marker-end="url(#trip-graph-arrow)"')
+    expect(html).toContain('x1="290" y1="62" x2="350" y2="62"')
+    expect(html).not.toContain('x1="155" y1="62" x2="485" y2="62"')
     expect(html).toContain('role="img"')
+    expect(html).toContain('aria-describedby="trip-graph-description-42"')
+    expect(html).toContain("Directed dependencies: Flight to Tokyo precedes Hotel in Tokyo.")
   })
 
   test("marks affected nodes with text as well as visual styling", () => {
@@ -28,6 +32,25 @@ describe("TripGraph", () => {
 
     expect(html).toContain("Affected")
     expect(html).toContain('aria-label="Hotel in Tokyo, hotel, CONFIRMED, affected"')
+  })
+
+  test("surfaces dependencies whose endpoints are missing", () => {
+    const html = renderToStaticMarkup(
+      <TripGraph graph={{ ...graph, edges: [{ source: 10, target: 99, relation_type: "precedes" }] }} />,
+    )
+
+    expect(html).toContain("Some dependencies could not be displayed")
+    expect(html).toContain("Booking 99")
+  })
+
+  test("truncates long node titles without losing their accessible label", () => {
+    const title = "Very long booking title for Tokyo airport connection"
+    const html = renderToStaticMarkup(
+      <TripGraph graph={{ ...graph, nodes: [{ ...graph.nodes[0], title }] }} />,
+    )
+
+    expect(html).toContain(">Very long booking title for Tok…</text>")
+    expect(html).toContain(`aria-label="${title}, flight, CONFIRMED"`)
   })
 
   test("renders an empty state when graph data is unavailable", () => {

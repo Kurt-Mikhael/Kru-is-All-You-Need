@@ -27,6 +27,7 @@ const COLUMN_GAP = 60
 const ROW_GAP = 22
 const LEFT_PADDING = 20
 const TOP_PADDING = 24
+const MAX_NODE_TITLE_LENGTH = 34
 
 function nodePosition(index: number) {
   const column = index % 2
@@ -35,6 +36,31 @@ function nodePosition(index: number) {
     x: LEFT_PADDING + column * (NODE_WIDTH + COLUMN_GAP),
     y: TOP_PADDING + row * (NODE_HEIGHT + ROW_GAP),
   }
+}
+function nodeEdgePoint(node: { x: number; y: number }, toward: { x: number; y: number }) {
+  const centerX = node.x + NODE_WIDTH / 2
+  const centerY = node.y + NODE_HEIGHT / 2
+  const dx = toward.x - centerX
+  const dy = toward.y - centerY
+  const scale = Math.min(
+    dx === 0 ? Number.POSITIVE_INFINITY : NODE_WIDTH / 2 / Math.abs(dx),
+    dy === 0 ? Number.POSITIVE_INFINITY : NODE_HEIGHT / 2 / Math.abs(dy),
+  )
+  return { x: centerX + dx * scale, y: centerY + dy * scale }
+}
+
+
+function graphDescription(graph: TripGraphData) {
+  const titles = new Map(graph.nodes.map((node) => [node.id, node.title]))
+  const nodes = graph.nodes.length
+    ? graph.nodes.map((node) => `${node.title} (${node.booking_type}, ${node.status})`).join("; ")
+    : "none"
+  const dependencies = graph.edges.length
+    ? graph.edges
+        .map((edge) => `${titles.get(edge.source) ?? `Booking ${edge.source}`} ${edge.relation_type} ${titles.get(edge.target) ?? `Booking ${edge.target}`}`)
+        .join("; ")
+    : "none"
+  return `Trip ${graph.trip_id} dependency graph. Nodes: ${nodes}. Directed dependencies: ${dependencies}.`
 }
 
 export function TripGraph({ graph, affectedBookingIds = [] }: { graph: TripGraphData | null; affectedBookingIds?: number[] }): JSX.Element {
@@ -51,6 +77,9 @@ export function TripGraph({ graph, affectedBookingIds = [] }: { graph: TripGraph
   const graphHeight = TOP_PADDING + rows * NODE_HEIGHT + (rows - 1) * ROW_GAP + TOP_PADDING
   const positions = new Map(graph.nodes.map((node, index) => [node.id, nodePosition(index)]))
   const affected = new Set(affectedBookingIds)
+  const titles = new Map(graph.nodes.map((node) => [node.id, node.title]))
+  const missingEdges = graph.edges.filter((edge) => !positions.has(edge.source) || !positions.has(edge.target))
+  const descriptionId = `trip-graph-description-${graph.trip_id}`
 
   return (
     <section className="card p-4" aria-label={`Trip dependency graph for trip ${graph.trip_id}`}>
@@ -58,11 +87,17 @@ export function TripGraph({ graph, affectedBookingIds = [] }: { graph: TripGraph
         <h2 className="text-[13px] font-extrabold uppercase tracking-widest text-[var(--navy)]">Trip dependency graph</h2>
         <span className="text-[11px] text-muted-foreground">{graph.nodes.length} bookings · {graph.edges.length} dependencies</span>
       </div>
+      <p id={descriptionId} className="sr-only">{graphDescription(graph)}</p>
+      {missingEdges.length > 0 && (
+        <p className="mt-3 rounded-xl border border-dashed border-amber-300 bg-amber-50 p-3 text-[12px] text-amber-950" role="status">
+          Some dependencies could not be displayed: {missingEdges.map((edge) => `${titles.get(edge.source) ?? `Booking ${edge.source}`} ${edge.relation_type} ${titles.get(edge.target) ?? `Booking ${edge.target}`}`).join("; ")}.
+        </p>
+      )}
       {graph.nodes.length === 0 ? (
         <p className="mt-3 rounded-xl border border-dashed bg-[var(--surface-2)] p-5 text-center text-[13px] text-muted-foreground">No bookings in this trip.</p>
       ) : (
         <div className="mt-3 overflow-x-auto rounded-xl border bg-[var(--surface-2)]" tabIndex={0} aria-label="Scrollable trip dependency graph">
-          <svg className="h-auto min-w-[600px] w-full" viewBox={`0 0 ${GRAPH_WIDTH} ${graphHeight}`} role="img" aria-label={`Dependencies for trip ${graph.trip_id}`}>
+          <svg className="h-auto min-w-[600px] w-full" viewBox={`0 0 ${GRAPH_WIDTH} ${graphHeight}`} role="img" aria-label={`Dependencies for trip ${graph.trip_id}`} aria-describedby={descriptionId}>
             <title>Trip booking dependencies</title>
             <defs>
               <marker id="trip-graph-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
@@ -74,14 +109,14 @@ export function TripGraph({ graph, affectedBookingIds = [] }: { graph: TripGraph
                 const source = positions.get(edge.source)
                 const target = positions.get(edge.target)
                 if (!source || !target) return null
-                const startX = source.x + NODE_WIDTH / 2
-                const startY = source.y + NODE_HEIGHT / 2
-                const endX = target.x + NODE_WIDTH / 2
-                const endY = target.y + NODE_HEIGHT / 2
+                const sourceCenter = { x: source.x + NODE_WIDTH / 2, y: source.y + NODE_HEIGHT / 2 }
+                const targetCenter = { x: target.x + NODE_WIDTH / 2, y: target.y + NODE_HEIGHT / 2 }
+                const start = nodeEdgePoint(source, targetCenter)
+                const end = nodeEdgePoint(target, sourceCenter)
                 return (
                   <g key={`${edge.source}-${edge.target}-${edge.relation_type}-${index}`} aria-label={`${edge.relation_type}: ${edge.source} to ${edge.target}`}>
-                    <line x1={startX} y1={startY} x2={endX} y2={endY} stroke="currentColor" strokeWidth="2" strokeDasharray="6 4" markerEnd="url(#trip-graph-arrow)" />
-                    <text x={(startX + endX) / 2} y={(startY + endY) / 2 - 6} textAnchor="middle" className="fill-current text-[10px] font-semibold">{edge.relation_type}</text>
+                    <line x1={start.x} y1={start.y} x2={end.x} y2={end.y} stroke="currentColor" strokeWidth="2" strokeDasharray="6 4" markerEnd="url(#trip-graph-arrow)" />
+                    <text x={(start.x + end.x) / 2} y={(start.y + end.y) / 2 - 6} textAnchor="middle" className="fill-current text-[10px] font-semibold">{edge.relation_type}</text>
                   </g>
                 )
               })}
@@ -91,10 +126,12 @@ export function TripGraph({ graph, affectedBookingIds = [] }: { graph: TripGraph
                 const { x, y } = nodePosition(index)
                 const isAffected = affected.has(node.id)
                 const description = `${node.title}, ${node.booking_type}, ${node.status}${isAffected ? ", affected" : ""}`
+                const displayTitle = node.title.length > MAX_NODE_TITLE_LENGTH ? `${node.title.slice(0, MAX_NODE_TITLE_LENGTH - 3)}…` : node.title
                 return (
                   <g key={node.id} data-node-id={node.id} role="group" aria-label={description}>
+                    <title>{node.title}</title>
                     <rect x={x} y={y} width={NODE_WIDTH} height={NODE_HEIGHT} rx="12" fill={isAffected ? "#fff7ed" : "white"} stroke={isAffected ? "#c2410c" : "currentColor"} strokeWidth={isAffected ? "3" : "1.5"} />
-                    <text x={x + 14} y={y + 22} className="fill-current text-[13px] font-bold">{node.title}</text>
+                    <text x={x + 14} y={y + 22} className="fill-current text-[13px] font-bold">{displayTitle}</text>
                     <text x={x + 14} y={y + 42} className="fill-current text-[11px]">{node.booking_type} · {node.status}</text>
                     <text x={x + 14} y={y + 60} className="fill-current text-[10px]">Starts {node.start_time}</text>
                     {isAffected && <text x={x + NODE_WIDTH - 14} y={y + 22} textAnchor="end" className="fill-[#9a3412] text-[10px] font-extrabold uppercase tracking-wider">Affected</text>}

@@ -27,10 +27,10 @@ describe("ExposureCards", () => {
     expect(html).toContain("$750")
   })
 
-  test("uses the supplied currency when formatting values", () => {
-    const html = renderToStaticMarkup(<ExposureCards exposure={exposure} currency="IDR" />)
+  test("uses the supplied currency formatter for non-USD values", () => {
+    const html = renderToStaticMarkup(<ExposureCards exposure={exposure} currency="EUR" />)
 
-    expect(html).toContain("IDR 1,250")
+    expect(html).toContain("€1,250")
     expect(html).not.toContain("$1,250")
   })
 
