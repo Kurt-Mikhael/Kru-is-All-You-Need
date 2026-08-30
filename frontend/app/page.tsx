@@ -4,12 +4,12 @@ import { GlobeDemo } from "@/components/ui/globe-demo";
 
 export default function Landing() {
   return (
-    <main className="relative min-h-screen bg-background">
+    <main className="relative min-h-screen overflow-hidden bg-background">
       <GlobeDemo />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-4 pb-6 sm:px-6 sm:pb-8">
+      <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center px-4">
         <section
           aria-label="Enter continuity workspace"
-          className="pointer-events-auto w-full max-w-[520px] rounded-2xl border border-slate-200 bg-white/95 p-5 shadow-[0_12px_40px_rgba(15,23,42,0.12)] backdrop-blur supports-[backdrop-filter]:bg-white/85 sm:p-6"
+          className="pointer-events-auto w-full max-w-[520px] rounded-2xl border border-slate-200 bg-white/95 p-5 text-center shadow-[0_16px_48px_rgba(15,23,42,0.18)] backdrop-blur supports-[backdrop-filter]:bg-white/85 sm:p-6"
         >
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
             Trip continuity
