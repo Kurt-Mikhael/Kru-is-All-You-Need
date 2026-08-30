@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server"
 
 mock.module("next/navigation", () => ({
   useRouter: () => ({ push: () => {} }),
+  useSearchParams: () => new URLSearchParams(),
 }))
 
 const { default: Landing } = await import("./page")
